@@ -4,7 +4,7 @@ use nix::unistd::{pipe, read, write, close};
 use fork::{fork, Fork}; // Fix: Import Fork from the fork module
 use std::process;
 use std::os::fd::RawFd;
-
+use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
 
 fn calcular_pi_leibniz_un_proceso(iteraciones: u64) -> f64 {
     let mut suma = 0.0;
@@ -101,7 +101,7 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
             }
             process::exit(0); // Salimos del proceso hijo
         },
-        Ok(Fork::Parent { child, .. }) => {
+        Ok(Fork::Parent(child)) => {
                 println!("Padre: creé el hijo {} con PID {:?}", i, child);
                 child_pids.push(child);
         },
