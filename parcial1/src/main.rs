@@ -150,7 +150,7 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
 fn main() {
     let iteraciones = 279_000_000;
     let mut inicio = Instant::now(); 
-    let pi_aproximado = calcular_pi_leibniz_un_proceso(iteraciones);
+    let pi_aproximado = calcular_pi_leibniz_4_procesos_pipelines(iteraciones);
     let mut fin = Instant::now();
     let mut total = fin.duration_since(inicio);
     println!("Aproximación de π después de {} iteraciones: {} \n", iteraciones, pi_aproximado);
