@@ -1,10 +1,9 @@
 use std::time::Instant;
-use fork::{fork , Fork}; // Para crear el proceo child
-use nix::sys::wait::waitpid; // Para esperar el proceso hijo
-use nix::unistd::{close, pipe, read, write}; // Para crear el pipe
-use std::os::unix::io::RawFd; // Para usar los file descriptors
-use std::{process, ptr};
-use nix::unistd::Pid; // Para usar el pid
+use nix::sys::wait::waitpid;
+use nix::unistd::{fork, Fork, pipe, read, write, close};
+use std::process;
+use std::os::fd::RawFd;
+
 
 fn calcular_pi_leibniz_un_proceso(iteraciones: u64) -> f64 {
     let mut suma = 0.0;
@@ -32,37 +31,99 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
     let mut suma = 0.0;
     let mut signo = 1.0;
 
-    //Creamos los procesos
-    let (read_fd, write_fd) = pipe().unwrap(); // Creamos el pipe
-    // Creamos el primer proceso
-    let pid1 = fork::fork().unwrap();
-    if pid1.is_child() {
-        // Proceso hijo 1
-        close(read_fd).unwrap(); // Cerramos el pipe de lectura
-        for i in 0..counter_process0 {
-            let mut aux = 0.0;
-            let termino = signo / (2.0 * i as f64 + 1.0);
-            aux += termino;
-            signo *= -1.0; // Alternamos el signo en cada iteración
-        }
-        write(write_fd, &aux.to_ne_bytes()).unwrap(); // Enviamos la suma al pipe
-        close(write_fd).unwrap(); // Cerramos el pipe de escritura
-        process::exit(0); // Terminamos el proceso hijos
+    let mut pipes = Vec::new();
+    for _ in 0..4 {}
+        let (read_fd, write_fd) = pipe().unwrap();
+        pipes.push((read_fd, write_fd));
     }
-    //Leemos el resultado del primer proceso
-    let mut buffer = [0; 8]; // Buffer para leer el resultado
-    read(read_fd, &mut buffer).unwrap(); // Leemos el resultado del pipe
-    let mut aux = f64::from_ne_bytes(buffer); // Convertimos el resultado a f64
-    waitpid(pid1.unwrap(), None).unwrap(); // Esperamos a que el proceso hijo termine
-    close(read_fd).unwrap(); // Cerramos el pipe de lectura
-    //Agregamos a la suma
-    suma += aux; // Agregamos el resultado a la suma
+
+    for i in 0..4 {
+        match unsafe {fork()} {
+        Ok(Fork::Child) => {
+            println!(""Soy el hijo {} con PID {}", i, process::id()");
+            
+            //Cerramos pipes que no estan en uso en este momento:
+            for j in 0..4 {
+                if j != i {
+                    close(pipes[j].0).unwrap(); // Cerramos el extremo de lectura
+                    close(pipes[j].1).unwrap(); // Cerramos el extremo de escritura
+                }
+            }
+
+            close(pipes[i].0).unwrap(); // Cerramos el extremo de lectura
+
+            //Cada hijo hace un trabajo diferente segun el indiced
+            match i {
+                0 => {
+                    let mut aux = 0.0;
+                    for j in 0..counter_process0 {
+                        let termino = signo / (2.0 * j as f64 + 1.0);
+                        aux += termino;
+                        signo *= -1.0; // Alternamos el signo en cada iteración
+                    }
+                    write(pipes[i].1, &aux.to_ne_bytes()).unwrap(); // Enviamos el resultado al
+                    // padre
+                },
+                1 => {
+                    let mut aux = 0.0;
+                    for j in counter_process0..counter_process1 {
+                        let termino = signo / (2.0 * j as f64 + 1.0);
+                        aux += termino;
+                        signo *= -1.0; // Alternamos el signo en cada iteración
+                    }
+                    write(pipes[i].1, &aux.to_ne_bytes()).unwrap(); // Enviamos el resultado al padre
+                    
+                },
+                2 => {
+                    let mut aux = 0.0;
+                    for j in counter_process1..counter_process2 {
+                        let termino = signo / (2.0 * j as f64 + 1.0);
+                        aux += termino;
+                        signo *= -1.0; // Alternamos el signo en cada iteración
+                    }
+                    write(pipes[i].1, &aux.to_ne_bytes()).unwrap(); // Enviamos el resultado al padre
+                },
+                3 => {
+                    let mut aux = 0.0;
+                    for j in counter_process2..counter_process3 {
+                        let termino = signo / (2.0 * j as f64 + 1.0);
+                        aux += termino;
+                        signo *= -1.0; // Alternamos el signo en cada iteración
+                    }
+                    write(pipes[i].1, &aux.to_ne_bytes()).unwrap(); // Enviamos el resultado al
+                    // padre
+                },
+                _ => unreachable!(),
+            }
+            process::exit(0); // Salimos del proceso hijo
+        },
+        Ok(Fork::Parent { child, .. }) => {
+                println!("Padre: creé el hijo {} con PID {:?}", i, child);
+                child_pids.push(child);
+        },
+        Err(_) => {
+            println!("Error al crear el proceso hijo");
+            process::exit(1);
+        }
+    }
+    for i in 0..4 {
+        close(pipes[i].1).unwrap();
+    }
+
+    //Realizar la suma de los resultados de los hijos
+    for i in 0..4 {
+        let mut buffer = [0u8; 8]; // Buffer para leer el resultado
+        read(pipes[i].0, &mut buffer).unwrap(); // Leemos el resultado del hijo
+        let aux = f64::from_ne_bytes(buffer); // Convertimos el resultado a f64
+        suma += aux; // Sumamos el resultado al total
+    }
+    //Multiplicamos por 4 para obtener π
+    suma * 4.0
+    
+}
 
     
-    
-    //Resultado
-    suma * 4.0 // Multiplicamos por 4 para obtener π
-}
+
 
 fn main() {
     let iteraciones = 279_000_000;
