@@ -160,6 +160,12 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
 }
 
 
+fn pub calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
+    // Implementación de la función usando memoria compartida
+    // ...
+    0.0 // Placeholder
+}
+
 fn main() {
     let iteraciones = 279_000_000;
     let mut inicio = Instant::now(); 
