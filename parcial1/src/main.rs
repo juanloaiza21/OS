@@ -1,6 +1,7 @@
 use std::time::Instant;
 use nix::sys::wait::waitpid;
-use nix::unistd::{fork, Fork, pipe, read, write, close};
+use nix::unistd::{fork, pipe, read, write, close};
+use nix::unistd::fork::Fork; // Fix: Import Fork from the fork module
 use std::process;
 use std::os::fd::RawFd;
 
