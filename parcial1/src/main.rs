@@ -21,6 +21,8 @@ fn calcular_pi_leibniz_un_proceso(iteraciones: u64) -> f64 {
 
 //Usando pipes
 fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
+    use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+    
     //Calculamos el rango de cada proceso:
     let rango = iteraciones / 4;
     let counter_process0 = rango; //Rango 1 va de 0 a esta var
@@ -49,12 +51,19 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
             //Cerramos pipes que no estan en uso en este momento:
             for j in 0..4 {
                 if j != i {
-                    close(pipes[j].0).unwrap(); // Cerramos el extremo de lectura
-                    close(pipes[j].1).unwrap(); // Cerramos el extremo de escritura
+                    // Cerramos el extremo de lectura usando as_raw_fd y from_raw_fd
+                    let raw_fd = pipes[j].0.as_raw_fd();
+                    close(unsafe { OwnedFd::from_raw_fd(raw_fd) }).unwrap();
+                    
+                    // Cerramos el extremo de escritura usando as_raw_fd y from_raw_fd
+                    let raw_fd = pipes[j].1.as_raw_fd();
+                    close(unsafe { OwnedFd::from_raw_fd(raw_fd) }).unwrap();
                 }
             }
 
-            close(pipes[i].0).unwrap(); // Cerramos el extremo de lectura
+            // Cerramos el extremo de lectura del pipe actual
+            let raw_fd = pipes[i].0.as_raw_fd();
+            close(unsafe { OwnedFd::from_raw_fd(raw_fd) }).unwrap();
 
             //Cada hijo hace un trabajo diferente segun el indiced
             match i {
@@ -65,8 +74,9 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
                         aux += termino;
                         signo *= -1.0; // Alternamos el signo en cada iteración
                     }
-                    write(pipes[i].1, &aux.to_ne_bytes()).unwrap(); // Enviamos el resultado al
-                    // padre
+                    // Usamos as_raw_fd y from_raw_fd para write
+                    let raw_fd = pipes[i].1.as_raw_fd();
+                    write(unsafe { OwnedFd::from_raw_fd(raw_fd) }, &aux.to_ne_bytes()).unwrap();
                 },
                 1 => {
                     let mut aux = 0.0;
@@ -75,8 +85,9 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
                         aux += termino;
                         signo *= -1.0; // Alternamos el signo en cada iteración
                     }
-                    write(pipes[i].1, &aux.to_ne_bytes()).unwrap(); // Enviamos el resultado al padre
-                    
+                    // Usamos as_raw_fd y from_raw_fd para write
+                    let raw_fd = pipes[i].1.as_raw_fd();
+                    write(unsafe { OwnedFd::from_raw_fd(raw_fd) }, &aux.to_ne_bytes()).unwrap();
                 },
                 2 => {
                     let mut aux = 0.0;
@@ -85,7 +96,9 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
                         aux += termino;
                         signo *= -1.0; // Alternamos el signo en cada iteración
                     }
-                    write(pipes[i].1, &aux.to_ne_bytes()).unwrap(); // Enviamos el resultado al padre
+                    // Usamos as_raw_fd y from_raw_fd para write
+                    let raw_fd = pipes[i].1.as_raw_fd();
+                    write(unsafe { OwnedFd::from_raw_fd(raw_fd) }, &aux.to_ne_bytes()).unwrap();
                 },
                 3 => {
                     let mut aux = 0.0;
@@ -94,8 +107,9 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
                         aux += termino;
                         signo *= -1.0; // Alternamos el signo en cada iteración
                     }
-                    write(pipes[i].1, &aux.to_ne_bytes()).unwrap(); // Enviamos el resultado al
-                    // padre
+                    // Usamos as_raw_fd y from_raw_fd para write
+                    let raw_fd = pipes[i].1.as_raw_fd();
+                    write(unsafe { OwnedFd::from_raw_fd(raw_fd) }, &aux.to_ne_bytes()).unwrap();
                 },
                 _ => unreachable!(),
             }
@@ -113,13 +127,17 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
     }
     
     for i in 0..4 {
-        close(pipes[i].1).unwrap();
+        // Cerramos los extremos de escritura en el padre
+        let raw_fd = pipes[i].1.as_raw_fd();
+        close(unsafe { OwnedFd::from_raw_fd(raw_fd) }).unwrap();
     }
 
     //Realizar la suma de los resultados de los hijos
     for i in 0..4 {
         let mut buffer = [0u8; 8]; // Buffer para leer el resultado
-        read(pipes[i].0, &mut buffer).unwrap(); // Leemos el resultado del hijo
+        // Usamos as_raw_fd y from_raw_fd para read
+        let raw_fd = pipes[i].0.as_raw_fd();
+        read(unsafe { OwnedFd::from_raw_fd(raw_fd) }, &mut buffer).unwrap();
         let aux = f64::from_ne_bytes(buffer); // Convertimos el resultado a f64
         suma += aux; // Sumamos el resultado al total
     }
