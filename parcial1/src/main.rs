@@ -32,7 +32,7 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
     let mut signo = 1.0;
 
     let mut pipes = Vec::new();
-    for _ in 0..4 {}
+    for _ in 0..4 {
         let (read_fd, write_fd) = pipe().unwrap();
         pipes.push((read_fd, write_fd));
     }
