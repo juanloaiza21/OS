@@ -163,9 +163,17 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
 fn main() {
     let iteraciones = 279_000_000;
     let mut inicio = Instant::now(); 
-    let pi_aproximado = calcular_pi_leibniz_4_procesos_pipelines(iteraciones);
+    let pi_aproximado1 = calcular_pi_leibniz_un_proceso(iteraciones);
     let mut fin = Instant::now();
     let mut total = fin.duration_since(inicio);
-    println!("Aproximación de π después de {} iteraciones: {} \n", iteraciones, pi_aproximado);
+    println!("Aproximación de π después de {} iteraciones: {} \n", iteraciones, pi_aproximado1);
     print!("Tiempo total de ejecucion sincrono: {} segundos o {} milis\n", total.as_secs(), total.as_millis());
+    println!("--------------------------------------------------");
+    inicio = Instant::now();
+    let pi_aproximado2 = calcular_pi_leibniz_4_procesos_pipelines(iteraciones);
+    fin = Instant::now();
+    total = fin.duration_since(inicio);
+    println!("Aproximación de π después de {} iteraciones: {} \n", iteraciones, pi_aproximado2);
+    print!("Tiempo total de ejecucion asincrono (pipelines): {} segundos o {} milis\n", total.as_secs(), total.as_millis());
+    println!("--------------------------------------------------");
 }
