@@ -5,6 +5,7 @@ use fork::{fork, Fork}; // Fix: Import Fork from the fork module
 use std::process;
 use std::os::fd::RawFd;
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+use std::mem;
 
 fn calcular_pi_leibniz_un_proceso(iteraciones: u64) -> f64 {
     let mut suma = 0.0;
@@ -21,9 +22,6 @@ fn calcular_pi_leibniz_un_proceso(iteraciones: u64) -> f64 {
 
 //Usando pipes
 fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
-    use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
-    use std::mem;
-    
     //Calculamos el rango de cada proceso:
     let rango = iteraciones / 4;
     let counter_process0 = rango; //Rango 1 va de 0 a esta var
@@ -35,10 +33,11 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
     let mut suma = 0.0;
     let mut signo = 1.0;
 
+    // Usamos Option<OwnedFd> para poder extraer los descriptores de manera segura
     let mut pipes = Vec::new();
     for _ in 0..4 {
         let (read_fd, write_fd) = pipe().unwrap();
-        pipes.push((read_fd, write_fd));
+        pipes.push((Some(read_fd), Some(write_fd)));
     }
 
     // Define child_pids vector
@@ -52,21 +51,24 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
             //Cerramos pipes que no estan en uso en este momento:
             for j in 0..4 {
                 if j != i {
-                    // Extraemos el descriptor de lectura y lo cerramos
-                    let fd_read = mem::replace(&mut pipes[j].0, unsafe { OwnedFd::from_raw_fd(-1) });
-                    close(fd_read).unwrap();
+                    // Extraemos el descriptor de lectura y lo cerramos si existe
+                    if let Some(fd_read) = pipes[j].0.take() {
+                        close(fd_read).unwrap();
+                    }
                     
-                    // Extraemos el descriptor de escritura y lo cerramos
-                    let fd_write = mem::replace(&mut pipes[j].1, unsafe { OwnedFd::from_raw_fd(-1) });
-                    close(fd_write).unwrap();
+                    // Extraemos el descriptor de escritura y lo cerramos si existe
+                    if let Some(fd_write) = pipes[j].1.take() {
+                        close(fd_write).unwrap();
+                    }
                 }
             }
 
             // Cerramos el extremo de lectura del pipe actual
-            let fd_read = mem::replace(&mut pipes[i].0, unsafe { OwnedFd::from_raw_fd(-1) });
-            close(fd_read).unwrap();
+            if let Some(fd_read) = pipes[i].0.take() {
+                close(fd_read).unwrap();
+            }
 
-            //Cada hijo hace un trabajo diferente segun el indiced
+            //Cada hijo hace un trabajo diferente segun el indice
             match i {
                 0 => {
                     let mut aux = 0.0;
@@ -75,9 +77,11 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
                         aux += termino;
                         signo *= -1.0; // Alternamos el signo en cada iteración
                     }
-                    // Extraemos y usamos el descriptor de escritura
-                    let fd_write = mem::replace(&mut pipes[i].1, unsafe { OwnedFd::from_raw_fd(-1) });
-                    write(fd_write, &aux.to_ne_bytes()).unwrap();
+                    
+                    // Extraemos el descriptor de escritura si existe
+                    if let Some(fd_write) = pipes[i].1.take() {
+                        write(fd_write, &aux.to_ne_bytes()).unwrap();
+                    }
                 },
                 1 => {
                     let mut aux = 0.0;
@@ -86,9 +90,11 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
                         aux += termino;
                         signo *= -1.0; // Alternamos el signo en cada iteración
                     }
-                    // Extraemos y usamos el descriptor de escritura
-                    let fd_write = mem::replace(&mut pipes[i].1, unsafe { OwnedFd::from_raw_fd(-1) });
-                    write(fd_write, &aux.to_ne_bytes()).unwrap();
+                    
+                    // Extraemos el descriptor de escritura si existe
+                    if let Some(fd_write) = pipes[i].1.take() {
+                        write(fd_write, &aux.to_ne_bytes()).unwrap();
+                    }
                 },
                 2 => {
                     let mut aux = 0.0;
@@ -97,9 +103,11 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
                         aux += termino;
                         signo *= -1.0; // Alternamos el signo en cada iteración
                     }
-                    // Extraemos y usamos el descriptor de escritura
-                    let fd_write = mem::replace(&mut pipes[i].1, unsafe { OwnedFd::from_raw_fd(-1) });
-                    write(fd_write, &aux.to_ne_bytes()).unwrap();
+                    
+                    // Extraemos el descriptor de escritura si existe
+                    if let Some(fd_write) = pipes[i].1.take() {
+                        write(fd_write, &aux.to_ne_bytes()).unwrap();
+                    }
                 },
                 3 => {
                     let mut aux = 0.0;
@@ -108,9 +116,11 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
                         aux += termino;
                         signo *= -1.0; // Alternamos el signo en cada iteración
                     }
-                    // Extraemos y usamos el descriptor de escritura
-                    let fd_write = mem::replace(&mut pipes[i].1, unsafe { OwnedFd::from_raw_fd(-1) });
-                    write(fd_write, &aux.to_ne_bytes()).unwrap();
+                    
+                    // Extraemos el descriptor de escritura si existe
+                    if let Some(fd_write) = pipes[i].1.take() {
+                        write(fd_write, &aux.to_ne_bytes()).unwrap();
+                    }
                 },
                 _ => unreachable!(),
             }
@@ -129,18 +139,21 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
     
     for i in 0..4 {
         // Cerramos los extremos de escritura en el padre
-        let fd_write = mem::replace(&mut pipes[i].1, unsafe { OwnedFd::from_raw_fd(-1) });
-        close(fd_write).unwrap();
+        if let Some(fd_write) = pipes[i].1.take() {
+            close(fd_write).unwrap();
+        }
     }
 
     //Realizar la suma de los resultados de los hijos
     for i in 0..4 {
         let mut buffer = [0u8; 8]; // Buffer para leer el resultado
-        // Extraemos y usamos el descriptor de lectura
-        let fd_read = mem::replace(&mut pipes[i].0, unsafe { OwnedFd::from_raw_fd(-1) });
-        read(fd_read, &mut buffer).unwrap();
-        let aux = f64::from_ne_bytes(buffer); // Convertimos el resultado a f64
-        suma += aux; // Sumamos el resultado al total
+        
+        // Extraemos el descriptor de lectura si existe
+        if let Some(fd_read) = pipes[i].0.take() {
+            read(fd_read, &mut buffer).unwrap();
+            let aux = f64::from_ne_bytes(buffer); // Convertimos el resultado a f64
+            suma += aux; // Sumamos el resultado al total
+        }
     }
     //Multiplicamos por 4 para obtener π
     suma * 4.0
