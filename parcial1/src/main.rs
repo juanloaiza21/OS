@@ -37,10 +37,13 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
         pipes.push((read_fd, write_fd));
     }
 
+    // Define child_pids vector
+    let mut child_pids = Vec::new();
+
     for i in 0..4 {
         match unsafe {fork()} {
         Ok(Fork::Child) => {
-            println!(""Soy el hijo {} con PID {}", i, process::id()");
+            println!("Soy el hijo {} con PID {}", i, process::id());
             
             //Cerramos pipes que no estan en uso en este momento:
             for j in 0..4 {
@@ -105,7 +108,9 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
             println!("Error al crear el proceso hijo");
             process::exit(1);
         }
+        }
     }
+    
     for i in 0..4 {
         close(pipes[i].1).unwrap();
     }
@@ -119,10 +124,7 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
     }
     //Multiplicamos por 4 para obtener π
     suma * 4.0
-    
 }
-
-    
 
 
 fn main() {
@@ -134,5 +136,3 @@ fn main() {
     println!("Aproximación de π después de {} iteraciones: {} \n", iteraciones, pi_aproximado);
     print!("Tiempo total de ejecucion sincrono: {} segundos o {} milis\n", total.as_secs(), total.as_millis());
 }
-
-
