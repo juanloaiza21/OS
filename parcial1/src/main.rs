@@ -303,9 +303,12 @@ fn main() {
     let pi_aproximado1 = calcular_pi_leibniz_un_proceso(iteraciones);
     let mut fin = Instant::now();
     let mut total = fin.duration_since(inicio);
+    println!("--------------------------------------------------");
+    println!("                  Sincrono                        ");
     println!("Aproximación de π después de {} iteraciones: {} \n", iteraciones, pi_aproximado1);
     print!("Tiempo total de ejecucion sincrono: {} segundos o {} milis\n", total.as_secs(), total.as_millis());
     println!("--------------------------------------------------");
+    println!("                  Pipelines                       ");
     inicio = Instant::now();
     let pi_aproximado2 = calcular_pi_leibniz_4_procesos_pipelines(iteraciones);
     fin = Instant::now();
@@ -313,7 +316,7 @@ fn main() {
     println!("Aproximación de π después de {} iteraciones: {} \n", iteraciones, pi_aproximado2);
     print!("Tiempo total de ejecucion asincrono (pipelines): {} segundos o {} milis\n", total.as_secs(), total.as_millis());
     println!("--------------------------------------------------");
-    
+    println!("                    shmem                               ");
     // Añado la ejecución de la función con memoria compartida
     inicio = Instant::now();
     let pi_aproximado3 = calcular_pi_leibniz_4_procesos_shmem(iteraciones);
