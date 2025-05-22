@@ -6,6 +6,8 @@ use std::process;
 use std::os::fd::RawFd;
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
 use std::mem;
+use shared_memory::{Shmem, ShmemConf};
+use std::sync::atomic::{AtomicU32, Ordering};
 
 
 fn calcular_pi_leibniz_un_proceso(iteraciones: u64) -> f64 {
@@ -162,8 +164,6 @@ fn calcular_pi_leibniz_4_procesos_pipelines(iteraciones: u64) -> f64 {
 
 
 fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
-    use shared_memory::{Shmem, ShmemConf};
-    use std::sync::atomic::{AtomicU32, Ordering};
     
     // Calculamos el rango para cada proceso
     let rango = iteraciones / 4;
