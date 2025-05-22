@@ -295,7 +295,7 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
     
     // Multiplicamos por 4 para obtener pi
     4.0 * suma_total
-}
+}   
 
 fn main() {
     let iteraciones = 279_000_000;
