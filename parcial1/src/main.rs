@@ -6,8 +6,11 @@ use std::process;
 use std::os::fd::RawFd;
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
 use std::mem;
-use shared_memory::{Shmem, ShmemConf};
+use nix::unistd::{ Pid};
+use nix::sys::wait::waitpid;
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::process;
+use shared_memory::ShmemConf;
 
 
 fn calcular_pi_leibniz_un_proceso(iteraciones: u64) -> f64 {
@@ -173,7 +176,6 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
     let counter_process3 = iteraciones;
     
     // Creamos la región de memoria compartida
-    // Necesitamos espacio para 4 f64s (resultados) + 1 AtomicU32 (contador de procesos terminados)
     let shmem = ShmemConf::new()
         .size(4 * std::mem::size_of::<f64>() + std::mem::size_of::<AtomicU32>())
         .os_id("pi_calculation")
@@ -183,7 +185,7 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
     // Puntero a la memoria compartida
     let ptr = shmem.as_ptr();
     
-    // Ahora obtenemos un puntero al contador atómico (lo ubicamos al final de la memoria compartida)
+    // Ahora obtenemos un puntero al contador atómico
     let counter_offset = 4 * std::mem::size_of::<f64>();
     let counter_ptr = unsafe { ptr.add(counter_offset) as *mut AtomicU32 };
     
@@ -204,8 +206,6 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
                 
                 // Calculamos el signo inicial para este proceso
                 if i > 0 {
-                    // Si el rango comienza en un número impar, el signo inicial es -1.0
-                    // Si comienza en un número par, el signo inicial es 1.0
                     match i {
                         1 => {
                             if counter_process0 % 2 == 1 {
@@ -263,7 +263,7 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
                 let result_ptr = unsafe { ptr.add(i * std::mem::size_of::<f64>()) as *mut f64 };
                 unsafe { std::ptr::write(result_ptr, suma) };
                 
-                // Incrementamos el contador atómico para indicar que este proceso ha terminado
+                // Incrementamos el contador atómico
                 let counter = unsafe { &*counter_ptr };
                 counter.fetch_add(1, Ordering::SeqCst);
                 
@@ -272,6 +272,7 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
             },
             Ok(Fork::Parent(child)) => {
                 println!("Padre: creé el hijo {} con PID {:?}", i, child);
+                // Aquí es donde está el error: child ya es un Pid de nix, así que lo guardamos así
                 child_pids.push(child);
             },
             Err(_) => {
@@ -283,7 +284,8 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
     
     // Esperamos a que todos los hijos terminen
     for pid in child_pids {
-        waitpid(Some(pid), None).expect("Error al esperar por el hijo");
+        // Aquí usamos directamente el pid que ya es de tipo Pid
+        waitpid(pid, None).expect("Error al esperar por el hijo");
     }
     
     // Leemos y sumamos los resultados
