@@ -1,16 +1,14 @@
-use std::time::Instant;
-use nix::sys::wait::waitpid;
-use nix::unistd::{pipe, read, write, close};
-use fork::{fork, Fork}; // Fix: Import Fork from the fork module
-use std::process;
-use std::os::fd::RawFd;
-use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
-use std::mem;
-use nix::unistd::{ Pid};
-use nix::sys::wait::waitpid;
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::process;
 use shared_memory::ShmemConf;
+use std::time::Instant;
+use std::process;
+use std::os::fd::{RawFd, AsRawFd, FromRawFd, OwnedFd};
+use std::mem;
+use std::sync::atomic::{AtomicU32, Ordering};
+
+use nix::sys::wait::waitpid;
+use nix::unistd::{Pid, pipe, read, write, close};
+
+use fork::{fork, Fork};
 
 
 fn calcular_pi_leibniz_un_proceso(iteraciones: u64) -> f64 {
@@ -272,7 +270,6 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
             },
             Ok(Fork::Parent(child)) => {
                 println!("Padre: creé el hijo {} con PID {:?}", i, child);
-                // Aquí es donde está el error: child ya es un Pid de nix, así que lo guardamos así
                 child_pids.push(child);
             },
             Err(_) => {
@@ -284,8 +281,8 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
     
     // Esperamos a que todos los hijos terminen
     for pid in child_pids {
-        // Aquí usamos directamente el pid que ya es de tipo Pid
-        waitpid(pid, None).expect("Error al esperar por el hijo");
+        // Convertimos a Option<Pid> explícitamente
+        waitpid(Some(pid), None).expect("Error al esperar por el hijo");
     }
     
     // Leemos y sumamos los resultados
