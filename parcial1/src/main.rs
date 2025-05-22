@@ -281,8 +281,8 @@ fn calcular_pi_leibniz_4_procesos_shmem(iteraciones: u64) -> f64 {
     
     // Esperamos a que todos los hijos terminen
     for pid in child_pids {
-        // Convertimos a Option<Pid> explícitamente
-        waitpid(Some(pid), None).expect("Error al esperar por el hijo");
+        // Convertimos el i32 a nix::unistd::Pid usando from_raw
+        waitpid(Some(Pid::from_raw(pid)), None).expect("Error al esperar por el hijo");
     }
     
     // Leemos y sumamos los resultados
@@ -312,5 +312,14 @@ fn main() {
     total = fin.duration_since(inicio);
     println!("Aproximación de π después de {} iteraciones: {} \n", iteraciones, pi_aproximado2);
     print!("Tiempo total de ejecucion asincrono (pipelines): {} segundos o {} milis\n", total.as_secs(), total.as_millis());
+    println!("--------------------------------------------------");
+    
+    // Añado la ejecución de la función con memoria compartida
+    inicio = Instant::now();
+    let pi_aproximado3 = calcular_pi_leibniz_4_procesos_shmem(iteraciones);
+    fin = Instant::now();
+    total = fin.duration_since(inicio);
+    println!("Aproximación de π después de {} iteraciones: {} \n", iteraciones, pi_aproximado3);
+    print!("Tiempo total de ejecucion asincrono (memoria compartida): {} segundos o {} milis\n", total.as_secs(), total.as_millis());
     println!("--------------------------------------------------");
 }
