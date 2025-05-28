@@ -1,0 +1,8 @@
+[package]
+name = "parcial1_1"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+net = "0.0.2"
+tokio = "1.45.1"
