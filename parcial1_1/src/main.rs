@@ -12,7 +12,7 @@ fn handle_client(mut stream: TcpStream) {
     println!("Received request: {}", request);
     let response = "Hello, Client!".as_bytes();
     stream
-        .write_fmt(&response)
+        .write_all(&response)
         .expect("Failed to write response");
 }
 
