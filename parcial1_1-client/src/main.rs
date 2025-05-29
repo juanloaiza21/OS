@@ -3,7 +3,8 @@ use std::net::TcpStream;
 use std::str;
 
 fn main() {
-    let mut stream = TcpStream::connect("192.168.2.16:8080").expect("Couldnt connect to TcpServer"); //In connect change the ip
+    let mut stream =
+        TcpStream::connect("25.49.153.184:8080").expect("Couldnt connect to TcpServer"); //In connect change the ip
     loop {
         let mut input = String::new();
         let mut buffer: Vec<u8> = Vec::new();
