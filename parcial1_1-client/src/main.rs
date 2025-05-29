@@ -7,6 +7,7 @@ fn main() {
         TcpStream::connect("25.49.153.184:8080").expect("Couldnt connect to TcpServer"); //In connect change the ip
     loop {
         let mut input = String::new();
+        input = "Hello there from client:)";
         let mut buffer: Vec<u8> = Vec::new();
         io::stdin()
             .read_line(&mut input)
