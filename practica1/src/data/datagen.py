@@ -5,9 +5,9 @@ import random
 
 # Get the last index from the CSV if it exists
 last_index = 0
-file_exists = os.path.exists('data.csv') and os.path.getsize('data.csv') > 0
+file_exists = os.path.exists('./data.csv') and os.path.getsize('./data.csv') > 0
 if file_exists:
-    with open('data.csv', 'r') as csvfile:
+    with open('./data.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             if 'Index' in row:
@@ -66,7 +66,7 @@ with open('data.csv', mode, newline='') as csvfile:
         }
         # Write the row to the CSV
         writer.writerow(row)
-with open('data.csv', 'r') as csvfile:
+with open('./data.csv', 'r') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         if 'Index' in row:

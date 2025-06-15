@@ -1,5 +1,9 @@
-mod data_lector;
+use std::collections::HashMap;
+use std::path::Path;
 
-pub fn hola_mundo() {
-    data_lector::hola_mundo();
+mod data_lector;
+pub mod trip_struct;
+
+pub fn parsecsv<P: AsRef<Path>>(filename: P) -> HashMap<String, trip_struct::Trip> {
+    data_lector::parsecsv(filename)
 }
