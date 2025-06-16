@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-mod data_lector;
+pub mod hash_table_disk;
+pub mod trip_entry;
 pub mod trip_struct;
 
-pub fn parsecsv<P: AsRef<Path>>(filename: P) -> HashMap<String, trip_struct::Trip> {
-    data_lector::parsecsv(filename)
+pub fn parsecsv<P: AsRef<Path>>(filename: P) {
+    println!("Implementation in progress")
 }

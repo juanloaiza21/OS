@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug)]
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Trip {
     pub vendor_id: String,
     pub tpep_pickup_datetime: String,
