@@ -139,3 +139,7 @@ Los criterios se aplican en AND lógico:
 - Rendimiento:
   - Filtrado por iteradores (lazy evaluation)
   - Clonación selectiva solo de resultados
+ 
+## Ejemplos de uso 
+
+
