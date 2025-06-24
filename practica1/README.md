@@ -155,3 +155,9 @@ Los criterios se aplican en AND lógico:
 
 
 ![image alt](https://github.com/juanloaiza21/OS/blob/1c9eab97dc4f6a2b22b85e74f3455faadbe3901c/practica1/Practica1d.png)
+
+## Integrantes
+
+- Juan David Loaiza Reyes <juloaizar@unal.edu.co>
+- Heric Francisco Vargas Cabiativa <hevargasc@unal.edu.co>
+- 	Nicole Ariadna Celemin Triana <ncelemin@unal.edu.co>
