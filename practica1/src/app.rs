@@ -37,7 +37,7 @@ impl Default for App {
         let trips = load_trips("trips.csv");
         Self {
             trips,
-            filtered_trips: vec![], // al inicio no muestra nada
+            filtered_trips: vec![],
             index_query: String::new(),
             cost_operator: "<=".to_string(),
             cost_value: String::new(),
@@ -67,7 +67,7 @@ fn load_trips(path: &str) -> Vec<Trip> {
             continue;
         }
 
-        let pickup = parts[1].split_whitespace().next().unwrap_or("").to_string();
+        let pickup = parts[1].to_string(); // conserva fecha y hora
         let dropoff = parts[2].to_string();
         let passengers = parts[3].parse::<u32>().unwrap_or(0);
         let distance = parts[4].parse::<f32>().unwrap_or(0.0);
@@ -91,16 +91,14 @@ fn load_trips(path: &str) -> Vec<Trip> {
 impl EframeApp for App {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            ui.heading("Consulta de Viajes"); // Título de la parte superior
+            ui.heading("Consulta de Viajes");
 
             ui.columns(4, |cols| {
-                // Índice
                 cols[0].vertical(|ui| {
                     ui.label("Índice:");
                     ui.add(TextEdit::singleline(&mut self.index_query).hint_text("Ej: 128"));
                 });
 
-                // Fecha
                 cols[1].vertical(|ui| {
                     ui.checkbox(&mut self.use_date_filter, "Usar fecha:");
                     if self.use_date_filter {
@@ -131,7 +129,6 @@ impl EframeApp for App {
                     }
                 });
 
-                // Costo
                 cols[2].vertical(|ui| {
                     ui.label("Costo:");
                     ComboBox::from_id_source("operator_combo")
@@ -144,7 +141,6 @@ impl EframeApp for App {
                     ui.add(TextEdit::singleline(&mut self.cost_value).hint_text("Ej: 10"));
                 });
 
-                // Buscar y limpiar
                 cols[3].vertical(|ui| {
                     ui.add_space(20.0);
                     if ui.button("Buscar").clicked() {
@@ -161,7 +157,7 @@ impl EframeApp for App {
                                     || trip.index.to_string() == self.index_query;
 
                                 let date_match = if let Some(sel_date) = selected_date.clone() {
-                                    NaiveDate::parse_from_str(&trip.pickup, "%Y-%m-%d")
+                                    NaiveDate::parse_from_str(&trip.pickup[..10], "%Y-%m-%d")
                                         .map(|d| d == sel_date)
                                         .unwrap_or(false)
                                 } else {
@@ -207,7 +203,7 @@ impl EframeApp for App {
                 } else {
                     Grid::new("results_grid")
                         .striped(true)
-                        .min_col_width(80.0)
+                        .min_col_width(ui.available_width() / 6.5)
                         .show(ui, |ui| {
                             ui.label(RichText::new("Índice").strong());
                             ui.label(RichText::new("Fecha inicio").strong());
@@ -251,3 +247,4 @@ fn days_in_month(year: i32, month: u32) -> u32 {
 fn is_leap_year(year: i32) -> bool {
     (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
+
