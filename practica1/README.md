@@ -1,10 +1,10 @@
-## Dataset de Viajes en Taxi
+# Dataset de Viajes en Taxi
 
-Descripción del Dataset
+## Descripción del Dataset
 
 Este dataset contiene registros de viajes en taxi en la ciudad de Nueva York durante el mes de junio de 2020. Los datos incluyen información detallada sobre cada viaje, como horarios, ubicaciones, distancias, tarifas y métodos de pago.
 
-Estructura del Dataset
+## Estructura del Dataset
 
 El archivo `trips.csv` contiene los siguientes campos:
 
@@ -75,12 +75,12 @@ El archivo `trips.csv` contiene los siguientes campos:
 19. Index**: Número de índice del registro
     - Rango: 1-650
 
-## Aplicación de Consulta de Viajes
+# Aplicación de Consulta de Viajes
 
-Descripción
+## Descripción
 Aplicación gráfica en Rust para consultar y filtrar registros de viajes desde un archivo CSV. Permite búsquedas combinadas por índice, fecha y costo.
 
-Criterios de Búsqueda Implementados
+## Criterios de Búsqueda Implementados
 
 1. Búsqueda por Índice
 - Campo: index (ID único generado secuencialmente)
@@ -105,11 +105,11 @@ Criterios de Búsqueda Implementados
   - = (Igualdad exacta con tolerancia ε)
 - Formato: Número decimal (ej: 15.50)
 
-Lógica de Filtrado Combinado
+## Lógica de Filtrado Combinado
 Los criterios se aplican en AND lógico:
 (Índice) AND (Fecha si activa) AND (Costo)
 
-Adaptaciones Realizadas
+## Adaptaciones Realizadas
 
 1. Procesamiento del CSV
 - Ignora cabecera: Salta la primera línea automáticamente
