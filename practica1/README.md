@@ -2,7 +2,7 @@
 
 ## Descripción del Dataset
 
-Este dataset contiene registros de viajes en taxi en la ciudad de Nueva York durante el mes de junio de 2020. Los datos incluyen información detallada sobre cada viaje, como horarios, ubicaciones, distancias, tarifas y métodos de pago.
+Este dataset contiene registros de viajes en taxi en la ciudad de Nueva York desde el mes de junio de 2020. Los datos incluyen información detallada sobre cada viaje, como horarios, ubicaciones, distancias, tarifas y métodos de pago.
 
 ## Estructura del Dataset
 
