@@ -140,6 +140,18 @@ Los criterios se aplican en AND lógico:
   - Filtrado por iteradores (lazy evaluation)
   - Clonación selectiva solo de resultados
  
-## Ejemplos de uso 
+## Ejemplos de uso de la APP
+
+![image alt](https://github.com/juanloaiza21/OS/blob/1c9eab97dc4f6a2b22b85e74f3455faadbe3901c/practica1/Practica1.png)
 
 
+![image alt](https://github.com/juanloaiza21/OS/blob/1c9eab97dc4f6a2b22b85e74f3455faadbe3901c/practica1/Practica1a.png)
+
+
+![image alt](https://github.com/juanloaiza21/OS/blob/1c9eab97dc4f6a2b22b85e74f3455faadbe3901c/practica1/Practica1b.png)
+
+
+![image alt](https://github.com/juanloaiza21/OS/blob/1c9eab97dc4f6a2b22b85e74f3455faadbe3901c/practica1/Practica1c.png)
+
+
+![image alt](https://github.com/juanloaiza21/OS/blob/1c9eab97dc4f6a2b22b85e74f3455faadbe3901c/practica1/Practica1d.png)
