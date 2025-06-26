@@ -1,9 +1,15 @@
 [package]
 name = "practica1"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
-csv = "1.3.1"
-serde = {version = "1.0.219", features = ["derive"]}
-serde_json = "1.0.140"
+eframe = "0.27"
+egui = "0.27"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+csv = "1.3"
+
+[lib]
+path = "src/lib.rs"
