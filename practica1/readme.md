@@ -4,8 +4,14 @@
 ![Rust](https://img.shields.io/badge/Rust-1.70%2B-orange)
 ![Memoria](https://img.shields.io/badge/Uso%20de%20Memoria-<10MB-blue)
 
-**Fecha:** 2025-06-26 05:19:55  
-**Desarrollador:** juanloaiza21, hericep, nicole1ariadna
+**Fecha:** 2025-06-26   
+     
+**Desarrolladores:**     
+     
+     - Juan Loaiza (`juanloaiza21`)
+     - Heric Vargas (`hericep`)
+     - Nicole Ariadna (`nicole1ariadna`)
+     
 
 ## Descripción
 
@@ -25,7 +31,7 @@ Analizador de Viajes es una aplicación de alto rendimiento y bajo consumo de me
 - Rust 1.70 o superior
 - Sistemas operativos compatibles: Linux, macOS, Windows
 - 2GB de RAM (mínimo)
-- 100MB de espacio en disco (+ espacio para archivos de datos)
+- 100MB de espacio en disco obligatorios (+ espacio para archivos de datos dependiendo del archivo .csv a filtrar)
 
 ## Instalación
 
@@ -49,7 +55,16 @@ Analizador de Viajes es una aplicación de alto rendimiento y bajo consumo de me
 
 ### Opción 2: CMAKE
 
-1. Agregar cmake
+1. Asegúrate de tener CMake instalado.
+2. Ejecuta los siguientes comandos:
+
+     ```bash
+     mkdir build
+     cd build
+     cmake ..
+     make
+     ./nombre_del_ejecutable
+     ```
 
 ## Estructura de Archivos
 
@@ -61,6 +76,7 @@ analizador-viajes/
 │   │   ├── data_lector.rs # Lectura optimizada de CSV
 │   │   ├── disk_hash.rs   # Tabla hash basada en disco
 │   │   ├── filters.rs     # Filtros de datos
+│   │   ├── data.csv       # Archivo de datos (debe ser un archivo CSV que cumpla con la estructura solicitada)
 │   │   └── mod.rs         # Módulo principal de datos
 │   ├── visual/            # Interfaz gráfica
 │   │   ├── visual.rs      # Implementación UI
@@ -92,6 +108,15 @@ La interfaz está organizada en pestañas para una navegación intuitiva:
 
 1. En la pestaña **Inicio**, haz clic en "Seleccionar Archivo CSV"
 2. Selecciona un archivo CSV con datos de viajes
+- **Nota:** El archivo CSV debe contener las siguientes columnas:
+
+```csv
+vendor_id, tpep_pickup_datetime, tpep_dropoff_datetime, passenger_count,
+trip_distance, ratecode_id, store_and_fwd_flag, pu_location_id, do_location_id,
+payment_type, fare_amount, extra, mta_tax, tip_amount, tolls_amount,
+improvement_surcharge, total_amount, congestion_surcharge, index
+```
+
 3. Selecciona un directorio para guardar los resultados filtrados
 4. Haz clic en "Cargar Vista Previa" para ver una muestra de los datos
 
@@ -176,6 +201,14 @@ La aplicación proporciona un registro detallado de operaciones en la consola:
 - Tiempo de ejecución para cada operación
 - Resultados y estadísticas
 - Errores y advertencias
+
+## Ejemplos de uso del programa
+
+![Imagen de muestra 1](Example1.jpeg)
+![Imagen de muestra 2](Example2.jpeg)
+![Imagen de muestra 3](Example3.jpeg)
+![Imagen de muestra 4](Example4.jpeg)
+![Imagen de muestra 5](Example5.jpeg)
 
 ## Solución de Problemas
 
