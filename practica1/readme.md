@@ -5,7 +5,7 @@
 ![Memoria](https://img.shields.io/badge/Uso%20de%20Memoria-<10MB-blue)
 
 **Fecha:** 2025-06-26 05:19:55  
-**Desarrollador:** juanloaiza21
+**Desarrollador:** juanloaiza21, hericep, nicole1ariadna
 
 ## Descripción
 
