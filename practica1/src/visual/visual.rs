@@ -26,6 +26,11 @@ struct FilterState {
     statistics_loaded: bool,
     destinations_loaded: bool,
     should_switch_tab: Option<Tab>,
+    // Nuevo: Campos para paginación
+    current_page: usize,
+    total_pages: usize,
+    // Campo para almacenar el archivo temporal activo
+    temp_file: Option<String>,
 }
 
 struct FilterApp {
@@ -104,13 +109,17 @@ impl Default for FilterApp {
             let tmp_file = format!("{}/initial_data.csv", TMP_DIR);
 
             println!("Aplicando filtro inicial para cargar datos...");
-            match filters::filter_to_file(CSV_PATH, &tmp_file, filter, Some(MAX_DISPLAYED_ROWS)) {
+            match filters::filter_to_file(CSV_PATH, &tmp_file, filter, None) {
+                // Sin límite de resultados
                 Ok(count) => {
                     println!("Filtro aplicado. Total de registros encontrados: {}", count);
 
                     // Cargar los datos filtrados
                     if let Ok(file) = std::fs::File::open(&tmp_file) {
-                        println!("Cargando datos en la interfaz...");
+                        println!(
+                            "Cargando datos en la interfaz (primeros {} registros)...",
+                            MAX_DISPLAYED_ROWS
+                        );
                         let reader = std::io::BufReader::new(file);
                         let mut csv_reader = csv::ReaderBuilder::new()
                             .has_headers(true)
@@ -157,9 +166,15 @@ impl Default for FilterApp {
                         state.filtered_results = trips;
                         state.results_count = count;
                         state.is_filtering = false;
+                        // Inicializar paginación
+                        state.current_page = 0;
+                        state.total_pages = (count + MAX_DISPLAYED_ROWS - 1) / MAX_DISPLAYED_ROWS;
+                        state.temp_file = Some(tmp_file);
 
-                        // Eliminar el archivo temporal
-                        let _ = std::fs::remove_file(&tmp_file);
+                        println!(
+                            "Paginación configurada: {} páginas totales",
+                            state.total_pages
+                        );
                     } else {
                         println!("ERROR: No se pudo abrir el archivo temporal de resultados");
                         let mut state = state_clone.lock().unwrap();
@@ -224,8 +239,8 @@ impl FilterApp {
             let tmp_file = format!("{}/load_all_data.csv", TMP_DIR);
             println!("[CARGA TOTAL] Aplicando filtros a los datos...");
 
-            match filters::filter_to_file(CSV_PATH, &tmp_file, filter, Some(MAX_DISPLAYED_ROWS * 2))
-            {
+            match filters::filter_to_file(CSV_PATH, &tmp_file, filter, None) {
+                // Sin límite para guardar todos los datos
                 Ok(count) => {
                     println!(
                         "[CARGA TOTAL] ✓ Filtro aplicado exitosamente. Total de registros: {}",
@@ -233,7 +248,10 @@ impl FilterApp {
                     );
 
                     if let Ok(file) = std::fs::File::open(&tmp_file) {
-                        println!("[CARGA TOTAL] Cargando datos en memoria...");
+                        println!(
+                            "[CARGA TOTAL] Cargando datos en memoria (primeros {} registros)...",
+                            MAX_DISPLAYED_ROWS
+                        );
                         let reader = std::io::BufReader::new(file);
                         let mut csv_reader = csv::ReaderBuilder::new()
                             .has_headers(true)
@@ -284,16 +302,14 @@ impl FilterApp {
                             let mut state = state_clone.lock().unwrap();
                             state.filtered_results = trips;
                             state.results_count = count;
-                        }
-
-                        // Eliminar el archivo temporal
-                        if let Err(e) = std::fs::remove_file(&tmp_file) {
+                            state.current_page = 0;
+                            state.total_pages =
+                                (count + MAX_DISPLAYED_ROWS - 1) / MAX_DISPLAYED_ROWS;
+                            state.temp_file = Some(tmp_file.clone());
                             println!(
-                                "[CARGA TOTAL] Advertencia: No se pudo eliminar el archivo temporal: {}",
-                                e
+                                "[CARGA TOTAL] Paginación configurada: {} páginas totales",
+                                state.total_pages
                             );
-                        } else {
-                            println!("[CARGA TOTAL] Archivo temporal eliminado correctamente");
                         }
 
                         // ETAPA 2: Cálculo de estadísticas
@@ -478,6 +494,14 @@ impl FilterApp {
             if let Some(tab) = target_tab {
                 state.should_switch_tab = Some(tab);
             }
+
+            // Limpiar el archivo temporal anterior si existe
+            if let Some(old_file) = &state.temp_file {
+                if Path::new(old_file).exists() {
+                    let _ = std::fs::remove_file(old_file);
+                    println!("Eliminado archivo temporal anterior: {}", old_file);
+                }
+            }
         }
 
         let filter = self.build_filter();
@@ -493,9 +517,8 @@ impl FilterApp {
                 &tmp_file
             );
 
-            // Aplicar el filtrado y guardar a archivo
-            match filters::filter_to_file(CSV_PATH, &tmp_file, filter, Some(MAX_DISPLAYED_ROWS * 2))
-            {
+            // Aplicar el filtrado y guardar a archivo - Sin límite para guardar todos
+            match filters::filter_to_file(CSV_PATH, &tmp_file, filter, None) {
                 Ok(count) => {
                     println!("Filtrado completado. Encontrados {} registros", count);
 
@@ -548,10 +571,14 @@ impl FilterApp {
                         state.filtered_results = trips;
                         state.results_count = count;
                         state.is_filtering = false;
+                        state.current_page = 0;
+                        state.total_pages = (count + MAX_DISPLAYED_ROWS - 1) / MAX_DISPLAYED_ROWS;
+                        state.temp_file = Some(tmp_file);
 
-                        // Eliminar el archivo temporal
-                        let _ = std::fs::remove_file(&tmp_file);
-                        println!("Archivo temporal eliminado");
+                        println!(
+                            "Paginación configurada: {} páginas totales",
+                            state.total_pages
+                        );
                     } else {
                         println!("ERROR: No se pudo abrir el archivo temporal de resultados");
                         let mut state = state_clone.lock().unwrap();
@@ -566,6 +593,133 @@ impl FilterApp {
                     state.filter_error = Some(format!("Error al filtrar: {}", e));
                     state.is_filtering = false;
                 }
+            }
+        });
+    }
+
+    // Nueva función para cargar una página específica de datos
+    fn load_page(&self, page: usize) {
+        // Verificar si ya está filtrando
+        let temp_file = {
+            let mut state = self.state.lock().unwrap();
+            if state.is_filtering {
+                println!("Ya hay un proceso en curso, ignorando solicitud de cambio de página");
+                return;
+            }
+
+            if page >= state.total_pages {
+                println!(
+                    "Número de página inválido: {} (máximo: {})",
+                    page,
+                    state.total_pages - 1
+                );
+                return;
+            }
+
+            if state.current_page == page {
+                println!("La página solicitada ya está cargada");
+                return;
+            }
+
+            state.is_filtering = true;
+
+            match &state.temp_file {
+                Some(file) => file.clone(),
+                None => {
+                    state.is_filtering = false;
+                    state.filter_error =
+                        Some("No hay archivo de resultados disponible".to_string());
+                    return;
+                }
+            }
+        };
+
+        let state_clone = Arc::clone(&self.state);
+
+        thread::spawn(move || {
+            println!("Cargando página {} de resultados...", page);
+
+            if let Ok(file) = std::fs::File::open(&temp_file) {
+                let reader = std::io::BufReader::new(file);
+                let mut csv_reader = csv::ReaderBuilder::new()
+                    .has_headers(true)
+                    .from_reader(reader);
+
+                // Saltarse las filas anteriores a la página actual
+                let start_index = page * MAX_DISPLAYED_ROWS;
+                let mut current_idx = 0;
+
+                // Saltar registros anteriores a la página actual
+                println!(
+                    "Saltando {} registros para llegar a la página {}...",
+                    start_index, page
+                );
+                for _ in 0..start_index {
+                    if let Err(_) = csv_reader.records().next().transpose() {
+                        break; // Final del archivo o error
+                    }
+                    current_idx += 1;
+
+                    if current_idx % 1000 == 0 {
+                        println!("Saltados {} registros...", current_idx);
+                    }
+                }
+
+                // Leer los registros de la página actual
+                println!("Leyendo registros para la página {}...", page);
+                let mut trips = Vec::with_capacity(MAX_DISPLAYED_ROWS);
+                let mut page_idx = 0;
+
+                for result in csv_reader.records().take(MAX_DISPLAYED_ROWS) {
+                    page_idx += 1;
+
+                    if page_idx % 100 == 0 {
+                        println!("Procesados {} registros de la página...", page_idx);
+                    }
+
+                    if let Ok(record) = result {
+                        if record.len() >= 19 {
+                            trips.push(Trip {
+                                vendor_id: record[0].to_string(),
+                                tpep_pickup_datetime: record[1].to_string(),
+                                tpep_dropoff_datetime: record[2].to_string(),
+                                passenger_count: record[3].to_string(),
+                                trip_distance: record[4].to_string(),
+                                ratecode_id: record[5].to_string(),
+                                store_and_fwd_flag: record[6].to_string(),
+                                pu_location_id: record[7].to_string(),
+                                do_location_id: record[8].to_string(),
+                                payment_type: record[9].to_string(),
+                                fare_amount: record[10].to_string(),
+                                extra: record[11].to_string(),
+                                mta_tax: record[12].to_string(),
+                                tip_amount: record[13].to_string(),
+                                tolls_amount: record[14].to_string(),
+                                improvement_surcharge: record[15].to_string(),
+                                total_amount: record[16].to_string(),
+                                congestion_surcharge: record[17].to_string(),
+                                index: record[18].to_string(),
+                            });
+                        }
+                    }
+                }
+
+                println!("Cargados {} registros para la página {}", trips.len(), page);
+
+                let mut state = state_clone.lock().unwrap();
+                state.filtered_results = trips;
+                state.current_page = page;
+                state.is_filtering = false;
+
+                println!("Página {} cargada correctamente", page);
+            } else {
+                println!(
+                    "ERROR: No se pudo abrir el archivo de resultados para la página {}",
+                    page
+                );
+                let mut state = state_clone.lock().unwrap();
+                state.filter_error = Some(format!("No se pudo cargar la página {}", page));
+                state.is_filtering = false;
             }
         });
     }
@@ -731,14 +885,119 @@ impl FilterApp {
     }
 
     fn show_data_tab(&self, ui: &mut egui::Ui) {
-        let state = self.state.lock().unwrap();
-        let results = &state.filtered_results;
+        // Extraer toda la información necesaria del estado primero
+        let data_info = {
+            let state = self.state.lock().unwrap();
+            let results = state.filtered_results.clone(); // Clonamos los resultados para usarlos después
+            let current_page = state.current_page;
+            let total_pages = state.total_pages;
+            let total_count = state.results_count;
+            let is_filtering = state.is_filtering;
+
+            (
+                results,
+                current_page,
+                total_pages,
+                total_count,
+                is_filtering,
+            )
+        };
+
+        let (results, current_page, total_pages, total_count, is_filtering) = data_info;
+
+        // Calcular índices para mostrar información sobre los registros visualizados
+        let start_index = current_page * MAX_DISPLAYED_ROWS + 1;
+        let end_index = std::cmp::min(start_index + results.len() - 1, total_count);
 
         ui.label(format!(
-            "Mostrando {} de {} resultados",
-            results.len(),
-            state.results_count
+            "Mostrando registros {}-{} de {} resultados (Página {} de {})",
+            start_index,
+            end_index,
+            total_count,
+            current_page + 1,
+            total_pages
         ));
+
+        // Controles de paginación
+        ui.horizontal(|ui| {
+            if ui
+                .add_enabled(
+                    current_page > 0 && !is_filtering,
+                    egui::Button::new("← Anterior"),
+                )
+                .clicked()
+            {
+                self.load_page(current_page - 1);
+                return;
+            }
+
+            // Mostrar algunos botones de página cercanos a la página actual
+            let show_pages = 5; // Número de páginas para mostrar a cada lado
+            let start_page = if current_page > show_pages {
+                current_page - show_pages
+            } else {
+                0
+            };
+
+            let end_page = std::cmp::min(current_page + show_pages + 1, total_pages);
+
+            if start_page > 0 {
+                if ui
+                    .add_enabled(!is_filtering, egui::Button::new("1"))
+                    .clicked()
+                {
+                    self.load_page(0);
+                    return;
+                }
+
+                if start_page > 1 {
+                    ui.label("...");
+                }
+            }
+
+            for page in start_page..end_page {
+                let is_current = page == current_page;
+                let button_text = format!("{}", page + 1);
+
+                if is_current {
+                    ui.add(
+                        egui::Button::new(button_text).fill(egui::Color32::from_rgb(100, 150, 200)),
+                    );
+                } else if ui
+                    .add_enabled(!is_filtering, egui::Button::new(button_text))
+                    .clicked()
+                {
+                    self.load_page(page);
+                    return;
+                }
+            }
+
+            if end_page < total_pages {
+                if end_page < total_pages - 1 {
+                    ui.label("...");
+                }
+
+                let last_page = total_pages - 1;
+                if ui
+                    .add_enabled(!is_filtering, egui::Button::new(format!("{}", total_pages)))
+                    .clicked()
+                {
+                    self.load_page(last_page);
+                    return;
+                }
+            }
+
+            if ui
+                .add_enabled(
+                    current_page < total_pages - 1 && !is_filtering,
+                    egui::Button::new("Siguiente →"),
+                )
+                .clicked()
+            {
+                self.load_page(current_page + 1);
+                return;
+            }
+        });
 
         // Crear la tabla de resultados
         egui::ScrollArea::vertical()
@@ -783,7 +1042,7 @@ impl FilterApp {
                         });
                     })
                     .body(|mut body| {
-                        for trip in results.iter() {
+                        for trip in &results {
                             body.row(18.0, |mut row| {
                                 row.col(|ui| {
                                     ui.label(&trip.index);
@@ -813,12 +1072,40 @@ impl FilterApp {
                         }
                     });
             });
+
+        // Añadir una segunda barra de paginación al final de la tabla
+        ui.horizontal(|ui| {
+            if ui
+                .add_enabled(
+                    current_page > 0 && !is_filtering,
+                    egui::Button::new("← Anterior"),
+                )
+                .clicked()
+            {
+                self.load_page(current_page - 1);
+            }
+
+            ui.label(format!("Página {} de {}", current_page + 1, total_pages));
+
+            if ui
+                .add_enabled(
+                    current_page < total_pages - 1 && !is_filtering,
+                    egui::Button::new("Siguiente →"),
+                )
+                .clicked()
+            {
+                self.load_page(current_page + 1);
+            }
+        });
     }
 
     fn show_stats_tab(&self, ui: &mut egui::Ui) {
-        let state = self.state.lock().unwrap();
+        let stats_option = {
+            let state = self.state.lock().unwrap();
+            state.stats.clone()
+        };
 
-        if let Some(stats) = &state.stats {
+        if let Some(stats) = stats_option {
             ui.heading("Estadísticas de viajes filtrados");
 
             ui.label(format!(
@@ -852,9 +1139,12 @@ impl FilterApp {
     }
 
     fn show_popular_destinations_tab(&self, ui: &mut egui::Ui) {
-        let state = self.state.lock().unwrap();
+        let destinations_option = {
+            let state = self.state.lock().unwrap();
+            state.popular_destinations.clone()
+        };
 
-        if let Some(destinations) = &state.popular_destinations {
+        if let Some(destinations) = destinations_option {
             ui.heading("Destinos Más Populares");
 
             egui::ScrollArea::vertical()
@@ -875,10 +1165,10 @@ impl FilterApp {
                             });
                         })
                         .body(|mut body| {
-                            for (dest, count) in destinations.iter() {
+                            for (dest, count) in destinations {
                                 body.row(18.0, |mut row| {
                                     row.col(|ui| {
-                                        ui.label(dest);
+                                        ui.label(&dest);
                                     });
                                     row.col(|ui| {
                                         ui.label(format!("{}", count));
@@ -1002,25 +1292,39 @@ impl eframe::App for FilterApp {
                     ui.radio_value(&mut self.use_and, false, "OR lógico");
                 });
 
-                ui.horizontal(|ui| {
+                // Verificamos si hay un proceso en curso antes de habilitar los botones
+                let is_filtering = {
                     let state = self.state.lock().unwrap();
-                    let is_filtering = state.is_filtering;
-                    drop(state); // Liberar el candado antes de las operaciones UI
+                    state.is_filtering
+                };
 
-                    if ui.button("Aplicar Filtros").clicked() && !is_filtering {
+                ui.horizontal(|ui| {
+                    if ui
+                        .add_enabled(!is_filtering, egui::Button::new("Aplicar Filtros"))
+                        .clicked()
+                    {
                         self.apply_filter();
                     }
 
-                    if ui.button("Obtener Estadísticas").clicked() && !is_filtering {
+                    if ui
+                        .add_enabled(!is_filtering, egui::Button::new("Obtener Estadísticas"))
+                        .clicked()
+                    {
                         self.get_statistics();
                     }
 
-                    if ui.button("Ver Destinos Populares").clicked() && !is_filtering {
+                    if ui
+                        .add_enabled(!is_filtering, egui::Button::new("Ver Destinos Populares"))
+                        .clicked()
+                    {
                         self.get_popular_destinations();
                     }
 
                     // Botón para cargar todo
-                    if ui.button("Cargar Todo").clicked() && !is_filtering {
+                    if ui
+                        .add_enabled(!is_filtering, egui::Button::new("Cargar Todo"))
+                        .clicked()
+                    {
                         self.load_all();
                     }
                 });
@@ -1034,21 +1338,23 @@ impl eframe::App for FilterApp {
                             .desired_width(200.0),
                     );
 
-                    let state = self.state.lock().unwrap();
-                    let is_filtering = state.is_filtering;
-                    drop(state);
-
-                    if ui.button("Exportar").clicked() && !is_filtering {
+                    if ui
+                        .add_enabled(!is_filtering, egui::Button::new("Exportar"))
+                        .clicked()
+                    {
                         self.export_results();
                     }
                 });
 
                 // Mostrar estado de la exportación
-                let state = self.state.lock().unwrap();
-                if let Some(status) = &state.export_status {
+                let export_status = {
+                    let state = self.state.lock().unwrap();
+                    state.export_status.clone()
+                };
+
+                if let Some(status) = export_status {
                     ui.label(status);
                 }
-                drop(state);
             });
 
             // Mensaje de espera durante el filtrado y errores
