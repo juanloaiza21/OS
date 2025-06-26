@@ -8,7 +8,7 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
 // Número de buckets para la hash table
-const NUM_BUCKETS: usize = 256;
+const NUM_BUCKETS: usize = 256000;
 
 // Estructura para entradas de hash table
 #[derive(Serialize, Deserialize)]
